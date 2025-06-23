@@ -4,14 +4,17 @@ import path from 'path';
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [react()],
+    root: './', // project root for webview-ui
     build: {
-        outDir: '../dist',
+        outDir: '../dist', // output to main project’s dist/
         emptyOutDir: true,
-    },
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, 'src'),
-        },
-    },
+        rollupOptions: {
+        input: path.resolve(__dirname, 'src/main.tsx'), // entry point
+        output: {
+            entryFileNames: 'assets/index.js',
+            assetFileNames: 'assets/index.css'
+        }
+        }
+    }
 });
 //# sourceMappingURL=vite.config.js.map
