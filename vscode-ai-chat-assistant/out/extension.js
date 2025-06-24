@@ -32,27 +32,108 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.activate = activate;
 exports.deactivate = deactivate;
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = __importStar(require("vscode"));
 const webviewContent_1 = require("./webviewContent");
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
+const node_fetch_1 = __importDefault(require("node-fetch")); // Ensure `node-fetch@2` is installed
 function activate(context) {
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "vscode-ai-chat-assistant" is now active!');
-    const disposable = vscode.commands.registerCommand('aiChat.openChat', () => {
+    context.subscriptions.push(vscode.commands.registerCommand('aiChat.openChat', async () => {
         const panel = vscode.window.createWebviewPanel('aiChat', 'AI Chat Assistant', vscode.ViewColumn.Two, {
             enableScripts: true,
             localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'dist')],
         });
         panel.webview.html = (0, webviewContent_1.getWebviewContent)(panel.webview, context.extensionUri);
-    });
-    context.subscriptions.push(disposable);
+        panel.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'requestContext') {
+                const visibleEditors = vscode.window.visibleTextEditors;
+                const fallbackEditor = visibleEditors.find((ed) => ed.document && ed.document.getText().trim() !== '');
+                const fileContent = fallbackEditor?.document.getText() || '';
+                const fileName = fallbackEditor?.document.fileName || null;
+                panel.webview.postMessage({
+                    type: 'context',
+                    fileName,
+                    fileContent,
+                });
+            }
+            if (message.command === 'getFileContent') {
+                const uri = vscode.Uri.file(message.filePath);
+                try {
+                    const content = await vscode.workspace.fs.readFile(uri);
+                    panel.webview.postMessage({
+                        type: 'fileContent',
+                        fileName: message.filePath,
+                        fileContent: Buffer.from(content).toString('utf-8'),
+                        originalPrompt: message.originalPrompt,
+                    });
+                }
+                catch (err) {
+                    panel.webview.postMessage({
+                        type: 'fileContent',
+                        fileName: message.filePath,
+                        fileContent: null,
+                        error: `❌ Could not read file: ${message.filePath}`,
+                        originalPrompt: message.originalPrompt,
+                    });
+                }
+            }
+            if (message.command === 'geminiPrompt') {
+                const prompt = message.prompt;
+                const apiKey = 'AIzaSyCWtxBcKQlOI3WOg73PjvNvZ6DTIr_xrq0'; // Secure this key properly
+                try {
+                    const response = await (0, node_fetch_1.default)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                        }),
+                    });
+                    const rawText = await response.text();
+                    console.log('Gemini raw response:', rawText);
+                    let data;
+                    try {
+                        data = JSON.parse(rawText);
+                    }
+                    catch (err) {
+                        if (panel && panel.webview && panel.visible) {
+                            panel.webview.postMessage({
+                                type: 'geminiReply',
+                                reply: '❌ Gemini API returned malformed JSON:\n' + rawText,
+                            });
+                        }
+                        return;
+                    }
+                    let reply = '⚠️ Gemini API did not return a valid response.';
+                    if (Array.isArray(data?.candidates) &&
+                        data.candidates.length > 0 &&
+                        data.candidates[0]?.content?.parts) {
+                        reply = data.candidates[0].content.parts
+                            .map((p) => p.text || '')
+                            .join('\n')
+                            .trim();
+                    }
+                    if (panel.visible) {
+                        panel.webview.postMessage({
+                            type: 'geminiReply',
+                            reply,
+                        });
+                    }
+                }
+                catch (error) {
+                    const errorMessage = error?.message || 'Unknown error';
+                    if (panel.visible) {
+                        panel.webview.postMessage({
+                            type: 'geminiReply',
+                            reply: '❌ Gemini API request failed: ' + errorMessage,
+                        });
+                    }
+                }
+            }
+        });
+    }));
 }
-// This method is called when your extension is deactivated
 function deactivate() { }

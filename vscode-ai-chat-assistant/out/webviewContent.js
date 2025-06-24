@@ -35,10 +35,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getWebviewContent = getWebviewContent;
 const vscode = __importStar(require("vscode"));
+const fs_1 = require("fs");
 const utils_1 = require("./utils");
 function getWebviewContent(webview, extensionUri) {
-    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'assets', 'index.js'));
-    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'dist', 'assets', 'index.css'));
+    const distPath = vscode.Uri.joinPath(extensionUri, 'dist', 'assets');
+    const distFsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'assets').fsPath;
+    const files = (0, fs_1.readdirSync)(distFsPath);
+    const scriptFile = files.find(f => f.endsWith('.js'));
+    const styleFile = files.find(f => f.endsWith('.css'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, scriptFile));
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, styleFile));
     const nonce = (0, utils_1.getNonce)();
     return /* html */ `
     <!DOCTYPE html>

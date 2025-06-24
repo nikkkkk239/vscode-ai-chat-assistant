@@ -1,14 +1,18 @@
 import * as vscode from 'vscode';
+import { readdirSync } from 'fs';
+import { join } from 'path';
 import { getNonce } from './utils';
 
 export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'dist', 'assets', 'index.js')
-  );
+  const distPath = vscode.Uri.joinPath(extensionUri, 'dist', 'assets');
+  const distFsPath = vscode.Uri.joinPath(extensionUri, 'dist', 'assets').fsPath;
 
-  const styleUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, 'dist', 'assets', 'index.css')
-  );
+  const files = readdirSync(distFsPath);
+  const scriptFile = files.find(f => f.endsWith('.js'))!;
+  const styleFile = files.find(f => f.endsWith('.css'))!;
+
+  const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, scriptFile));
+  const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, styleFile));
 
   const nonce = getNonce();
 
