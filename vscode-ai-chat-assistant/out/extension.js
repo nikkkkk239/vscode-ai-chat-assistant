@@ -49,6 +49,7 @@ function activate(context) {
         });
         panel.webview.html = (0, webviewContent_1.getWebviewContent)(panel.webview, context.extensionUri);
         panel.webview.onDidReceiveMessage(async (message) => {
+            // === CONTEXT REQUEST ===
             if (message.command === 'requestContext') {
                 const visibleEditors = vscode.window.visibleTextEditors;
                 const fallbackEditor = visibleEditors.find((ed) => ed.document && ed.document.getText().trim() !== '');
@@ -60,6 +61,7 @@ function activate(context) {
                     fileContent,
                 });
             }
+            // === GET WORKSPACE FILES ===
             if (message.command === 'getWorkspaceFiles') {
                 const files = await vscode.workspace.findFiles('**/*.*', '**/node_modules/**', 1000);
                 const filePaths = files.map(file => vscode.workspace.asRelativePath(file));
@@ -68,6 +70,7 @@ function activate(context) {
                     files: filePaths,
                 });
             }
+            // === READ FILE CONTENT ===
             if (message.command === 'getFileContent') {
                 const filePath = message.filePath.replace(/\\/g, '/');
                 const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -102,6 +105,7 @@ function activate(context) {
                     });
                 }
             }
+            // === GEMINI PROMPT ===
             if (message.command === 'geminiPrompt') {
                 const prompt = message.prompt;
                 const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key
@@ -144,6 +148,34 @@ function activate(context) {
                     panel.webview.postMessage({
                         type: 'geminiReply',
                         reply: '❌ Gemini API request failed: ' + (error?.message || 'Unknown error'),
+                    });
+                }
+            }
+            // === APPLY CODE EDIT ===
+            if (message.command === 'applyCodeEdit') {
+                const { fileName, newCode } = message;
+                const workspaceFolders = vscode.workspace.workspaceFolders;
+                if (!workspaceFolders || workspaceFolders.length === 0) {
+                    panel.webview.postMessage({
+                        type: 'geminiReply',
+                        reply: `❌ No workspace folder is open.`,
+                    });
+                    return;
+                }
+                const workspaceUri = workspaceFolders[0].uri;
+                const fileUri = vscode.Uri.joinPath(workspaceUri, fileName);
+                try {
+                    const encoder = new TextEncoder();
+                    await vscode.workspace.fs.writeFile(fileUri, encoder.encode(newCode));
+                    panel.webview.postMessage({
+                        type: 'geminiReply',
+                        reply: `✅ Successfully updated \`${fileName}\`.`,
+                    });
+                }
+                catch (err) {
+                    panel.webview.postMessage({
+                        type: 'geminiReply',
+                        reply: `❌ Failed to write to \`${fileName}\`: ${err.message}`,
                     });
                 }
             }

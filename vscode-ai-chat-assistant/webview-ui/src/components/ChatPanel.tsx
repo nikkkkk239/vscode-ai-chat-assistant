@@ -8,6 +8,8 @@ export default function ChatPanel() {
   const [fileContext, setFileContext] = useState<{ fileName: string; fileContent: string } | null>(null);
   const [contextPrompted, setContextPrompted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastFileMatch = useRef<string | null>(null);
+  const expectingEditRef = useRef(false); // ✅ Only allow edit within short window
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -22,16 +24,34 @@ export default function ChatPanel() {
     setMessages(prev => [...prev, msg]);
   };
 
+  const handleCodeManipulation = (reply: string) => {
+    const codeBlockMatch = reply.match(/```[\w]*\n([\s\S]*?)```/);
+    const fileMentionMatch = reply.match(/(?:in|of|to|replace|update|overwrite)[\s:]*[`']?([\w./\\-]+\.\w+)[`']?/i);
+
+    if (codeBlockMatch && fileMentionMatch) {
+      const fileName = fileMentionMatch[1].trim();
+      const newCode = codeBlockMatch[1];
+
+      console.log('[ChatPanel] Sending code update to extension:', fileName);
+      vscode.postMessage({
+        command: 'applyCodeEdit',
+        fileName,
+        newCode,
+      });
+
+      appendMessage({
+        role: 'assistant',
+        content: `🔧 Attempting to update \`${fileName}\`...`,
+      });
+    }
+  };
+
   const replaceThinkingWith = (reply: string) => {
     setMessages(prev => {
       const updated = [...prev];
       const idx = [...updated]
         .reverse()
-        .findIndex(
-          msg =>
-            msg.role === 'assistant' &&
-            msg.content.trim() === '__TYPING__'
-        );
+        .findIndex(msg => msg.role === 'assistant' && msg.content.trim() === '__TYPING__');
 
       if (idx !== -1) {
         const actualIndex = updated.length - 1 - idx;
@@ -42,6 +62,19 @@ export default function ChatPanel() {
 
       return updated;
     });
+
+    const codeBlockExists = reply.match(/```[\w]*\n([\s\S]*?)```/);
+    const fileMentionExists = reply.match(/(?:in|of|to|replace|update|overwrite)[\s:]*[`']?([\w./\\-]+\.\w+)[`']?/i);
+
+    if (codeBlockExists && !fileMentionExists && lastFileMatch.current && expectingEditRef.current) {
+      // ✅ Only auto-inject filename if it's immediately after @filename use
+      const replyWithFilename = `Replace content of \`${lastFileMatch.current}\`:\n\n${reply}`;
+      handleCodeManipulation(replyWithFilename);
+    } else {
+      handleCodeManipulation(reply);
+    }
+
+    expectingEditRef.current = false; // ✅ Reset safety window
   };
 
   useEffect(() => {
@@ -136,6 +169,8 @@ export default function ChatPanel() {
 
     const match = input.match(/@([\w.\-/\\]+)/);
     if (match) {
+      lastFileMatch.current = match[1];
+      expectingEditRef.current = true; // ✅ Expect overwrite next if assistant responds
       vscode.postMessage({
         command: 'getFileContent',
         filePath: match[1],
