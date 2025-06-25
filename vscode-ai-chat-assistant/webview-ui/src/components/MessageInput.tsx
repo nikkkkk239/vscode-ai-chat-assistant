@@ -6,7 +6,11 @@ export default function MessageInput({ onSend }: { onSend: (msg: string) => void
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [fileSuggestions, setFileSuggestions] = useState<string[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageData, setImageData] = useState<string | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const listener = (e: MessageEvent) => {
@@ -21,9 +25,15 @@ export default function MessageInput({ onSend }: { onSend: (msg: string) => void
   }, []);
 
   const send = () => {
-    if (!text.trim()) return;
-    onSend(text);
+    if (!text.trim() && !imageData) return;
+    let final = text.trim();
+    if (imageData) {
+      final += `\n\n![uploaded image](${imageData})`;
+    }
+    onSend(final);
     setText('');
+    setImagePreview(null);
+    setImageData(null);
     setShowSuggestions(false);
   };
 
@@ -31,7 +41,6 @@ export default function MessageInput({ onSend }: { onSend: (msg: string) => void
     const value = e.target.value;
     setText(value);
 
-    // Trigger only when user types "@" at the end
     if (value.endsWith('@')) {
       vscode.postMessage({ command: 'getWorkspaceFiles' });
     } else {
@@ -65,26 +74,63 @@ export default function MessageInput({ onSend }: { onSend: (msg: string) => void
   const insertFileMention = (file: string) => {
     setText((prev) => prev.replace(/@$/, `@${file} `));
     setShowSuggestions(false);
-    // Optional: Refocus the input after inserting
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setImageData(base64);
+      setImagePreview(base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
-    <div className="relative flex items-center gap-2 p-3">
-      <input
-        ref={inputRef}
-        className="flex-1 px-3 py-2 bg-[#1e1e1e] text-white rounded-lg border border-gray-600 focus:outline-none"
-        value={text}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder="Ask something..."
-      />
-      <button
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-        onClick={send}
-      >
-        Send
-      </button>
+    <div className="relative flex flex-col gap-2 p-3">
+      {imagePreview && (
+        <div className="mb-2 max-w-sm">
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="rounded-lg border border-gray-600 max-h-40 object-contain"
+          />
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          className="flex-1 px-3 py-2 bg-[#1e1e1e] text-white rounded-lg border border-gray-600 focus:outline-none"
+          value={text}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask something or attach image..."
+        />
+        <button
+          className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-lg"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          +
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+        <button
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          onClick={send}
+        >
+          Send
+        </button>
+      </div>
 
       {showSuggestions && (
         <ul className="absolute bottom-14 left-3 w-[90%] max-h-48 overflow-auto bg-[#2c2c2c] border border-gray-600 rounded-lg shadow z-10">

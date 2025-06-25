@@ -40,7 +40,7 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const webviewContent_1 = require("./webviewContent");
-const node_fetch_1 = __importDefault(require("node-fetch")); // Ensure `node-fetch@2` is installed
+const node_fetch_1 = __importDefault(require("node-fetch")); // Ensure node-fetch v2 is installed
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('aiChat.openChat', async () => {
         const panel = vscode.window.createWebviewPanel('aiChat', 'AI Chat Assistant', vscode.ViewColumn.Two, {
@@ -69,7 +69,7 @@ function activate(context) {
                 });
             }
             if (message.command === 'getFileContent') {
-                const filePath = message.filePath.replace(/\\/g, '/'); // normalize slashes
+                const filePath = message.filePath.replace(/\\/g, '/');
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (!workspaceFolders || workspaceFolders.length === 0) {
                     panel.webview.postMessage({
@@ -104,7 +104,7 @@ function activate(context) {
             }
             if (message.command === 'geminiPrompt') {
                 const prompt = message.prompt;
-                const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key properly
+                const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key
                 try {
                     const response = await (0, node_fetch_1.default)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
@@ -120,12 +120,10 @@ function activate(context) {
                         data = JSON.parse(rawText);
                     }
                     catch (err) {
-                        if (panel && panel.webview && panel.visible) {
-                            panel.webview.postMessage({
-                                type: 'geminiReply',
-                                reply: '❌ Gemini API returned malformed JSON:\n' + rawText,
-                            });
-                        }
+                        panel.webview.postMessage({
+                            type: 'geminiReply',
+                            reply: '❌ Gemini API returned malformed JSON:\n' + rawText,
+                        });
                         return;
                     }
                     let reply = '⚠️ Gemini API did not return a valid response.';
@@ -137,21 +135,16 @@ function activate(context) {
                             .join('\n')
                             .trim();
                     }
-                    if (panel.visible) {
-                        panel.webview.postMessage({
-                            type: 'geminiReply',
-                            reply,
-                        });
-                    }
+                    panel.webview.postMessage({
+                        type: 'geminiReply',
+                        reply,
+                    });
                 }
                 catch (error) {
-                    const errorMessage = error?.message || 'Unknown error';
-                    if (panel.visible) {
-                        panel.webview.postMessage({
-                            type: 'geminiReply',
-                            reply: '❌ Gemini API request failed: ' + errorMessage,
-                        });
-                    }
+                    panel.webview.postMessage({
+                        type: 'geminiReply',
+                        reply: '❌ Gemini API request failed: ' + (error?.message || 'Unknown error'),
+                    });
                 }
             }
         });

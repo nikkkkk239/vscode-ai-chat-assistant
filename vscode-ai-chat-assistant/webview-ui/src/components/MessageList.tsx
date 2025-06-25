@@ -14,7 +14,7 @@ interface Props {
 
 export default function MessageList({ messages }: Props) {
   return (
-    <div className="space-y-3 px-2">
+    <div className="space-y-3 px-2 pb-4">
       {messages.map((msg, idx) => {
         let contentBlock;
 
@@ -27,6 +27,12 @@ export default function MessageList({ messages }: Props) {
                 components={{
                   a: (props: any) => (
                     <a {...props} className="text-blue-400 underline hover:text-blue-300" />
+                  ),
+                  img: (props) => (
+                    <img
+                      {...props}
+                      className="rounded-xl mt-2 border border-gray-600 max-w-[50%] max-h-64 object-contain"
+                    />
                   ),
                   code: ({ inline, className, children }: any) => {
                     const rawCode = String(children).replace(/\n$/, '');
@@ -43,7 +49,7 @@ export default function MessageList({ messages }: Props) {
                     const highlighted = hljs.highlightAuto(rawCode, lang ? [lang] : undefined).value;
 
                     return (
-                      <pre className="bg-zinc-900 rounded-xl overflow-auto text-sm p-2 mt-2">
+                      <pre className="bg-zinc-900 rounded-xl overflow-auto text-sm p-3 mt-2">
                         <code
                           className={`hljs language-${lang}`}
                           dangerouslySetInnerHTML={{ __html: highlighted }}
@@ -72,7 +78,7 @@ export default function MessageList({ messages }: Props) {
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xl overflow-x-hidden p-3 rounded-2xl shadow-sm break-words whitespace-pre-wrap ${
+              className={`max-w-xl overflow-x-hidden p-4 rounded-2xl shadow-sm break-words whitespace-pre-wrap ${
                 msg.role === 'user'
                   ? 'bg-blue-800 text-white rounded-br-md'
                   : 'bg-zinc-800 text-white rounded-bl-md'

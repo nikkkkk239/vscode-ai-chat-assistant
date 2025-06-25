@@ -3,7 +3,6 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { vscode } from '../vscode';
 
-
 export default function ChatPanel() {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [fileContext, setFileContext] = useState<{ fileName: string; fileContent: string } | null>(null);
@@ -102,11 +101,16 @@ export default function ChatPanel() {
     return () => window.removeEventListener('message', handleMessage);
   }, [messages]);
 
-  const handleSend = (text: string) => {
-    const input = text.trim();
-    if (!input) return;
+  const handleSend = (inputText: string, imageData?: string) => {
+    const input = inputText.trim();
+    if (!input && !imageData) return;
 
-    appendMessage({ role: 'user', content: input });
+    let content = input;
+    if (imageData) {
+      content += `\n\n![image](${imageData})`;
+    }
+
+    appendMessage({ role: 'user', content });
     appendMessage({ role: 'assistant', content: '__TYPING__' });
     scrollToBottom();
 

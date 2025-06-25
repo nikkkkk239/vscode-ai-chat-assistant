@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getWebviewContent } from './webviewContent';
-import fetch from 'node-fetch'; // Ensure `node-fetch@2` is installed
+import fetch from 'node-fetch'; // Ensure node-fetch v2 is installed
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         if (message.command === 'getFileContent') {
-          const filePath = message.filePath.replace(/\\/g, '/'); // normalize slashes
+          const filePath = message.filePath.replace(/\\/g, '/');
           const workspaceFolders = vscode.workspace.workspaceFolders;
 
           if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -82,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (message.command === 'geminiPrompt') {
           const prompt = message.prompt;
-          const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key properly
+          const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key
 
           try {
             const response = await fetch(
@@ -103,12 +103,10 @@ export function activate(context: vscode.ExtensionContext) {
             try {
               data = JSON.parse(rawText);
             } catch (err) {
-              if (panel && panel.webview && panel.visible) {
-                panel.webview.postMessage({
-                  type: 'geminiReply',
-                  reply: '❌ Gemini API returned malformed JSON:\n' + rawText,
-                });
-              }
+              panel.webview.postMessage({
+                type: 'geminiReply',
+                reply: '❌ Gemini API returned malformed JSON:\n' + rawText,
+              });
               return;
             }
 
@@ -124,20 +122,15 @@ export function activate(context: vscode.ExtensionContext) {
                 .trim();
             }
 
-            if (panel.visible) {
-              panel.webview.postMessage({
-                type: 'geminiReply',
-                reply,
-              });
-            }
+            panel.webview.postMessage({
+              type: 'geminiReply',
+              reply,
+            });
           } catch (error: any) {
-            const errorMessage = error?.message || 'Unknown error';
-            if (panel.visible) {
-              panel.webview.postMessage({
-                type: 'geminiReply',
-                reply: '❌ Gemini API request failed: ' + errorMessage,
-              });
-            }
+            panel.webview.postMessage({
+              type: 'geminiReply',
+              reply: '❌ Gemini API request failed: ' + (error?.message || 'Unknown error'),
+            });
           }
         }
       });
