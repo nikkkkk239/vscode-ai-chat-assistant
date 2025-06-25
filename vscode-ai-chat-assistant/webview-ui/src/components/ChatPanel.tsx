@@ -3,11 +3,21 @@ import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import { vscode } from '../vscode';
 
+
 export default function ChatPanel() {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [fileContext, setFileContext] = useState<{ fileName: string; fileContent: string } | null>(null);
   const [contextPrompted, setContextPrompted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      containerRef.current?.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 0);
+  };
 
   const appendMessage = (msg: { role: 'user' | 'assistant'; content: string }) => {
     setMessages(prev => [...prev, msg]);
@@ -16,17 +26,21 @@ export default function ChatPanel() {
   const replaceThinkingWith = (reply: string) => {
     setMessages(prev => {
       const updated = [...prev];
-      const idx = updated.findIndex(
-        (msg, i) =>
-          msg.role === 'assistant' &&
-          msg.content.trim().toLowerCase() === '⏳ thinking...' &&
-          i === updated.length - 1
-      );
+      const idx = [...updated]
+        .reverse()
+        .findIndex(
+          msg =>
+            msg.role === 'assistant' &&
+            msg.content.trim() === '__TYPING__'
+        );
+
       if (idx !== -1) {
-        updated[idx] = { role: 'assistant', content: reply };
+        const actualIndex = updated.length - 1 - idx;
+        updated[actualIndex] = { role: 'assistant', content: reply };
       } else {
         updated.push({ role: 'assistant', content: reply });
       }
+
       return updated;
     });
   };
@@ -76,7 +90,6 @@ export default function ChatPanel() {
         }
 
         const fullPrompt = `${message.originalPrompt}\n\nHere is the content of ${message.fileName}:\n\n${message.fileContent}`;
-        appendMessage({ role: 'assistant', content: '⏳ Processing attached file with Gemini...' });
         vscode.postMessage({ command: 'geminiPrompt', prompt: fullPrompt });
       }
 
@@ -94,11 +107,15 @@ export default function ChatPanel() {
     if (!input) return;
 
     appendMessage({ role: 'user', content: input });
-    appendMessage({ role: 'assistant', content: '⏳ Thinking...' });
+    appendMessage({ role: 'assistant', content: '__TYPING__' });
+    scrollToBottom();
 
     if (contextPrompted && fileContext) {
       if (input.toLowerCase() === 'yes') {
-        vscode.postMessage({ command: 'geminiPrompt', prompt: `Summarize this code file:\n\n${fileContext.fileContent}` });
+        vscode.postMessage({
+          command: 'geminiPrompt',
+          prompt: `Summarize this code file:\n\n${fileContext.fileContent}`,
+        });
         setContextPrompted(false);
         return;
       }
@@ -128,13 +145,6 @@ export default function ChatPanel() {
       prompt: input,
     });
   };
-
-  useEffect(() => {
-    containerRef.current?.scrollTo({
-      top: containerRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  }, [messages]);
 
   return (
     <div className="flex flex-col h-full w-full bg-[#1e1e1e] text-white">

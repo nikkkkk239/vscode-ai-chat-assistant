@@ -34,10 +34,35 @@ export function activate(context: vscode.ExtensionContext) {
           });
         }
 
+        if (message.command === 'getWorkspaceFiles') {
+          const files = await vscode.workspace.findFiles('**/*.*', '**/node_modules/**', 1000);
+          const filePaths = files.map(file => vscode.workspace.asRelativePath(file));
+          panel.webview.postMessage({
+            type: 'workspaceFiles',
+            files: filePaths,
+          });
+        }
+
         if (message.command === 'getFileContent') {
-          const uri = vscode.Uri.file(message.filePath);
+          const filePath = message.filePath.replace(/\\/g, '/'); // normalize slashes
+          const workspaceFolders = vscode.workspace.workspaceFolders;
+
+          if (!workspaceFolders || workspaceFolders.length === 0) {
+            panel.webview.postMessage({
+              type: 'fileContent',
+              fileContent: null,
+              error: `❌ No workspace is open.`,
+              originalPrompt: message.originalPrompt,
+              fileName: message.filePath,
+            });
+            return;
+          }
+
+          const workspaceUri = workspaceFolders[0].uri;
+          const fileUri = vscode.Uri.joinPath(workspaceUri, filePath);
+
           try {
-            const content = await vscode.workspace.fs.readFile(uri);
+            const content = await vscode.workspace.fs.readFile(fileUri);
             panel.webview.postMessage({
               type: 'fileContent',
               fileName: message.filePath,
