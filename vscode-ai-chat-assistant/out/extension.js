@@ -83,7 +83,7 @@ function activate(context) {
             }
             if (message.command === 'geminiPrompt') {
                 const prompt = message.prompt;
-                const apiKey = 'AIzaSyCWtxBcKQlOI3WOg73PjvNvZ6DTIr_xrq0'; // Secure this key properly
+                const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key properly
                 try {
                     const response = await (0, node_fetch_1.default)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',

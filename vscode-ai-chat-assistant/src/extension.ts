@@ -57,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (message.command === 'geminiPrompt') {
           const prompt = message.prompt;
-          const apiKey = 'AIzaSyCWtxBcKQlOI3WOg73PjvNvZ6DTIr_xrq0'; // Secure this key properly
+          const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key properly
 
           try {
             const response = await fetch(
