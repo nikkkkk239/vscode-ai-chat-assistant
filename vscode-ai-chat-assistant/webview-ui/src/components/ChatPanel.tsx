@@ -9,7 +9,7 @@ export default function ChatPanel() {
   const [contextPrompted, setContextPrompted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastFileMatch = useRef<string | null>(null);
-  const expectingEditRef = useRef(false); // ✅ Only allow edit within short window
+  const expectingEditRef = useRef(false);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -24,26 +24,18 @@ export default function ChatPanel() {
     setMessages(prev => [...prev, msg]);
   };
 
-  const handleCodeManipulation = (reply: string) => {
-    const codeBlockMatch = reply.match(/```[\w]*\n([\s\S]*?)```/);
-    const fileMentionMatch = reply.match(/(?:in|of|to|replace|update|overwrite)[\s:]*[`']?([\w./\\-]+\.\w+)[`']?/i);
+  const handleCodeManipulation = (fileName: string, newCode: string) => {
+    console.log('[ChatPanel] Sending code update to extension:', fileName);
+    vscode.postMessage({
+      command: 'applyCodeEdit',
+      fileName,
+      newCode,
+    });
 
-    if (codeBlockMatch && fileMentionMatch) {
-      const fileName = fileMentionMatch[1].trim();
-      const newCode = codeBlockMatch[1];
-
-      console.log('[ChatPanel] Sending code update to extension:', fileName);
-      vscode.postMessage({
-        command: 'applyCodeEdit',
-        fileName,
-        newCode,
-      });
-
-      appendMessage({
-        role: 'assistant',
-        content: `🔧 Attempting to update \`${fileName}\`...`,
-      });
-    }
+    appendMessage({
+      role: 'assistant',
+      content: `🔧 Attempting to update \`${fileName}\`...`,
+    });
   };
 
   const replaceThinkingWith = (reply: string) => {
@@ -63,18 +55,19 @@ export default function ChatPanel() {
       return updated;
     });
 
-    const codeBlockExists = reply.match(/```[\w]*\n([\s\S]*?)```/);
-    const fileMentionExists = reply.match(/(?:in|of|to|replace|update|overwrite)[\s:]*[`']?([\w./\\-]+\.\w+)[`']?/i);
+    // Attempt to parse reply only if we were expecting an edit
+    if (!expectingEditRef.current) return;
 
-    if (codeBlockExists && !fileMentionExists && lastFileMatch.current && expectingEditRef.current) {
-      // ✅ Only auto-inject filename if it's immediately after @filename use
-      const replyWithFilename = `Replace content of \`${lastFileMatch.current}\`:\n\n${reply}`;
-      handleCodeManipulation(replyWithFilename);
-    } else {
-      handleCodeManipulation(reply);
+    const codeBlockMatch = reply.match(/```[\w]*\n([\s\S]*?)```/);
+    const fileMentionMatch = reply.match(/(?:in|of|to|replace|update|overwrite|for)[\s:]*[`']?([\w./\\-]+\.\w+)[`']?/i);
+
+    const fileName = fileMentionMatch?.[1]?.trim() || lastFileMatch.current;
+
+    if (codeBlockMatch && fileName) {
+      handleCodeManipulation(fileName, codeBlockMatch[1]);
     }
 
-    expectingEditRef.current = false; // ✅ Reset safety window
+    expectingEditRef.current = false;
   };
 
   useEffect(() => {
@@ -170,7 +163,9 @@ export default function ChatPanel() {
     const match = input.match(/@([\w.\-/\\]+)/);
     if (match) {
       lastFileMatch.current = match[1];
-      expectingEditRef.current = true; // ✅ Expect overwrite next if assistant responds
+      const editIntent = /(replace|update|overwrite|modify|edit|with)/i.test(input);
+      expectingEditRef.current = editIntent;
+
       vscode.postMessage({
         command: 'getFileContent',
         filePath: match[1],

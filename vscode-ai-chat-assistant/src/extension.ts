@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getWebviewContent } from './webviewContent';
-import fetch from 'node-fetch'; // Ensure node-fetch v2 is installed
+import fetch from 'node-fetch'; 
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
@@ -18,7 +18,6 @@ export function activate(context: vscode.ExtensionContext) {
       panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
 
       panel.webview.onDidReceiveMessage(async (message) => {
-        // === CONTEXT REQUEST ===
         if (message.command === 'requestContext') {
           const visibleEditors = vscode.window.visibleTextEditors;
           const fallbackEditor = visibleEditors.find(
@@ -35,7 +34,6 @@ export function activate(context: vscode.ExtensionContext) {
           });
         }
 
-        // === GET WORKSPACE FILES ===
         if (message.command === 'getWorkspaceFiles') {
           const files = await vscode.workspace.findFiles('**/*.*', '**/node_modules/**', 1000);
           const filePaths = files.map(file => vscode.workspace.asRelativePath(file));
@@ -45,7 +43,6 @@ export function activate(context: vscode.ExtensionContext) {
           });
         }
 
-        // === READ FILE CONTENT ===
         if (message.command === 'getFileContent') {
           const filePath = message.filePath.replace(/\\/g, '/');
           const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -83,10 +80,9 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // === GEMINI PROMPT ===
         if (message.command === 'geminiPrompt') {
           const prompt = message.prompt;
-          const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key
+          const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; 
 
           try {
             const response = await fetch(
@@ -138,7 +134,6 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // === APPLY CODE EDIT ===
         if (message.command === 'applyCodeEdit') {
           const { fileName, newCode } = message;
           const workspaceFolders = vscode.workspace.workspaceFolders;

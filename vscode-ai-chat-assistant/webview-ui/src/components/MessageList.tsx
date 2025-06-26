@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
@@ -47,14 +48,30 @@ export default function MessageList({ messages }: Props) {
 
                     const lang = className?.replace('language-', '') || '';
                     const highlighted = hljs.highlightAuto(rawCode, lang ? [lang] : undefined).value;
+                    const [copied, setCopied] = useState(false);
+
+                    const handleCopy = () => {
+                      navigator.clipboard.writeText(rawCode).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000); 
+                      });
+                    };
 
                     return (
-                      <pre className="bg-zinc-900 rounded-xl overflow-auto text-sm p-3 mt-2">
-                        <code
-                          className={`hljs language-${lang}`}
-                          dangerouslySetInnerHTML={{ __html: highlighted }}
-                        />
-                      </pre>
+                      <div className="relative group">
+                        <button
+                          onClick={handleCopy}
+                          className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 text-xs bg-zinc-700 text-white px-2 py-1 rounded hover:bg-zinc-600 transition-all"
+                        >
+                          {copied ? 'Copied!' : 'Copy'}
+                        </button>
+                        <pre className="bg-zinc-900 rounded-xl overflow-auto text-sm p-3 mt-2">
+                          <code
+                            className={`hljs language-${lang}`}
+                            dangerouslySetInnerHTML={{ __html: highlighted }}
+                          />
+                        </pre>
+                      </div>
                     );
                   },
                 }}

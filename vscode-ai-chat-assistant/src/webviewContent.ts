@@ -16,7 +16,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
 
   const nonce = getNonce();
 
-  return /* html */ `
+  return  `
     <!DOCTYPE html>
     <html lang="en">
     <head>
