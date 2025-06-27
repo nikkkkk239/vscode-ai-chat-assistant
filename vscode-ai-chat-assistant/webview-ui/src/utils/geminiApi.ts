@@ -1,6 +1,6 @@
 
 export async function callGeminiAPI(messages: { role: string, content: string }[]): Promise<string> {
-  const API_KEY = 'AIzaSyBvjq35WF-Uq3C7leila2RDoknvBa2fZLo';
+  const API_KEY = 'your-api-key';
 
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + API_KEY, {
     method: 'POST',

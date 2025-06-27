@@ -46,7 +46,7 @@ function getWebviewContent(webview, extensionUri) {
     const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, scriptFile));
     const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(distPath, styleFile));
     const nonce = (0, utils_1.getNonce)();
-    return /* html */ `
+    return `
     <!DOCTYPE html>
     <html lang="en">
     <head>

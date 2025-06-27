@@ -40,7 +40,7 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const webviewContent_1 = require("./webviewContent");
-const node_fetch_1 = __importDefault(require("node-fetch")); // Ensure node-fetch v2 is installed
+const node_fetch_1 = __importDefault(require("node-fetch"));
 function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('aiChat.openChat', async () => {
         const panel = vscode.window.createWebviewPanel('aiChat', 'AI Chat Assistant', vscode.ViewColumn.Two, {
@@ -49,7 +49,6 @@ function activate(context) {
         });
         panel.webview.html = (0, webviewContent_1.getWebviewContent)(panel.webview, context.extensionUri);
         panel.webview.onDidReceiveMessage(async (message) => {
-            // === CONTEXT REQUEST ===
             if (message.command === 'requestContext') {
                 const visibleEditors = vscode.window.visibleTextEditors;
                 const fallbackEditor = visibleEditors.find((ed) => ed.document && ed.document.getText().trim() !== '');
@@ -61,7 +60,6 @@ function activate(context) {
                     fileContent,
                 });
             }
-            // === GET WORKSPACE FILES ===
             if (message.command === 'getWorkspaceFiles') {
                 const files = await vscode.workspace.findFiles('**/*.*', '**/node_modules/**', 1000);
                 const filePaths = files.map(file => vscode.workspace.asRelativePath(file));
@@ -70,7 +68,6 @@ function activate(context) {
                     files: filePaths,
                 });
             }
-            // === READ FILE CONTENT ===
             if (message.command === 'getFileContent') {
                 const filePath = message.filePath.replace(/\\/g, '/');
                 const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -105,10 +102,9 @@ function activate(context) {
                     });
                 }
             }
-            // === GEMINI PROMPT ===
             if (message.command === 'geminiPrompt') {
                 const prompt = message.prompt;
-                const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A'; // Secure this key
+                const apiKey = 'AIzaSyAhdLThuWmXRByBqbqfbKGJAsfqm2R3F8A';
                 try {
                     const response = await (0, node_fetch_1.default)(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
@@ -151,7 +147,6 @@ function activate(context) {
                     });
                 }
             }
-            // === APPLY CODE EDIT ===
             if (message.command === 'applyCodeEdit') {
                 const { fileName, newCode } = message;
                 const workspaceFolders = vscode.workspace.workspaceFolders;
